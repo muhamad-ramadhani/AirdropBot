@@ -1,0 +1,53 @@
+var token = "5410165868:AAEbvPZEQHidfGCJRixO_DyKD64IGyVpMow";
+var telegramUrl = "https://api.telegram.org/bot" + token;
+var webAppUrl = "https://script.google.com/macros/s/AKfycbwDV3HxS6fXyZLhHUJI1pbulOAp4_xTDOs9OfnZZjzdZkba17Fu/exec";
+var ssId = "1kcyamseBDHSpIWkEQyDMUmBTfbVIuCnK1wLcr_v2IN4";
+/*
+var adminID = "";   // 4. Fill in your own Telegram ID for debugging
+*/
+
+function getMe() {
+  var url = telegramUrl + "/getMe";
+  var response = UrlFetchApp.fetch(url);
+  Logger.log(response.getContentText());
+}
+
+function setWebhook() {
+  var url = telegramUrl + "/setWebhook?url=" + webAppUrl;
+  var response = UrlFetchApp.fetch(url);
+  Logger.log(response.getContentText());
+}
+
+function sendText(id,text) {
+  var url = telegramUrl + "/sendMessage?chat_id=" + id + "&text=" + encodeURIComponent(text);
+  var response = UrlFetchApp.fetch(url);
+  Logger.log(response.getContentText());
+}
+
+function doGet(e) {
+  return HtmlService.createHtmlOutput("Hi there");
+}
+
+function doPost(e) {
+  try {
+    // this is where telegram works
+    var data = JSON.parse(e.postData.contents);
+    var text = data.message.text;
+    var username = data.message.chat.username;
+    var id = data.message.chat.id;
+    var name = data.message.chat.first_name + " " + data.message.chat.last_name;
+    var answer = "Hi " + name;
+    sendText(id,answer);
+    SpreadsheetApp.openById(ssId).getSheets()[0].appendRow([username,id,name,text]);
+    
+    if(/^@/.test(text)) {
+      var sheetName = text.slice(1).split(" ")[0];
+      var sheet = SpreadsheetApp.openById(ssId).getSheetByName(sheetName) ? SpreadsheetApp.openById(ssId).getSheetByName(sheetName) : SpreadsheetApp.openById(ssId).insertSheet(sheetName);
+      var newText = text.split(" ").slice(1).join(" ");
+      sheet.appendRow([username,id,name,newText]);
+      sendText(id,"your text '" + newText + "' is now added to the sheet '" + sheetName + "'");
+    }
+  } catch(e) {
+    sendText(adminID, JSON.stringify(e,null,4));
+  }
+}
